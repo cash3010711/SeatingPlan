@@ -8,9 +8,9 @@ import {
   ZoomIn,
   ZoomOut,
   RotateCcw,
-  Grid,
+  LayoutGrid,
   Plus,
-  Image,
+  Camera,
   Printer,
   ChevronDown,
 } from 'lucide-react';
@@ -43,6 +43,7 @@ export const WeddingCanvas: React.FC<WeddingCanvasProps> = ({ onDropGuestToTable
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+
 
   // Pan interaction
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -152,7 +153,7 @@ export const WeddingCanvas: React.FC<WeddingCanvasProps> = ({ onDropGuestToTable
   return (
     <div
       ref={canvasRef}
-      className="relative flex-1 h-full overflow-hidden select-none bg-slate-100 dot-grid cursor-grab active:cursor-grabbing canvas-bg"
+      className="relative flex-1 self-stretch min-h-0 overflow-hidden select-none bg-slate-100 dot-grid cursor-grab active:cursor-grabbing canvas-bg"
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
@@ -237,7 +238,7 @@ export const WeddingCanvas: React.FC<WeddingCanvasProps> = ({ onDropGuestToTable
           }`}
           title="切換磁吸網格對齊 (20px)"
         >
-          <Grid className="w-4 h-4" />
+          <LayoutGrid className="w-4 h-4" />
           <span className="hidden sm:inline">磁吸對齊</span>
         </button>
 
@@ -316,7 +317,7 @@ export const WeddingCanvas: React.FC<WeddingCanvasProps> = ({ onDropGuestToTable
           className="flex items-center gap-1.5 px-3 py-2 text-slate-700 hover:text-rose-700 hover:bg-rose-50 rounded-xl transition-colors border border-slate-200"
           title="匯出畫布為高畫質 PNG 圖片"
         >
-          <Image className="w-4 h-4 text-rose-500" />
+          <Camera className="w-4 h-4 text-rose-500" />
           <span className="hidden md:inline">{isExporting ? '匯出中...' : '平面圖 PNG'}</span>
         </button>
 

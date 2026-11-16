@@ -130,7 +130,7 @@ export const TableNode: React.FC<TableNodeProps> = ({
         height: isCircle ? `${size}px` : `${rectHeight}px`,
         cursor: isDragging ? 'grabbing' : 'grab',
       }}
-      className={`absolute select-none transition-shadow ${
+      className={`absolute top-0 left-0 select-none transition-shadow ${
         isCircle ? 'rounded-full' : 'rounded-2xl'
       } ${
         isOverCapacity

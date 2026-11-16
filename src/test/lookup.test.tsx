@@ -1,10 +1,16 @@
 import React from 'react';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { LookupPage } from '../pages/LookupPage';
 import { lookupGuestPublic } from '../services/lookupService';
 import { saveGuestsToStorage, saveTablesToStorage } from '../utils/storage';
 import { initialGuests, initialTables } from '../mock/initialData';
+
+// Mock Supabase to test sanitized local cache fallback deterministically
+vi.mock('../lib/supabase', () => ({
+  isSupabaseConfigured: () => false,
+  getSupabase: () => null,
+}));
 
 describe('LookupPage & Strict Privacy Protection (FR-5 / H-1)', () => {
   beforeEach(() => {

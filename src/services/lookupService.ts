@@ -39,20 +39,30 @@ export async function lookupGuestPublic(nameQuery: string): Promise<SanitizedLoo
 
   if (isSupabaseConfigured() && client) {
     try {
-      // 1. Fetch tables public info (id, table_no, name)
-      const { data: tablesData } = await client
-        .from('tables')
-        .select('id, table_no, name');
-      const tableMap = new Map((tablesData || []).map((t) => [t.id, t]));
-
-      // 2. Fetch ONLY safe fields from guests matching query
-      const { data: guestsData, error } = await client
+      // 1. Fetch tables public info (id, table_no, name) with timeout
+      const tablesPromise = client.from('tables').select('id, table_no, name');
+      const guestsPromise = client
         .from('guests')
         .select('id, name, table_id, meal_type, needs_baby_chair, cake_count')
         .ilike('name', `%${query}%`);
 
-      if (!error && guestsData) {
-        return guestsData.map((g) => {
+      const timeoutPromise = new Promise<{ error: Error }>((_, reject) =>
+        setTimeout(() => reject(new Error('Supabase query timeout')), 3000)
+      );
+
+      const [tablesResult, guestsResult] = await Promise.race([
+        Promise.all([tablesPromise, guestsPromise]),
+        timeoutPromise.then(() => {
+          throw new Error('Supabase query timeout');
+        }),
+      ]);
+
+      const { data: tablesData } = tablesResult;
+      const { data: guestsData, error } = guestsResult;
+      const tableMap = new Map((tablesData || []).map((t: any) => [t.id, t]));
+
+      if (!error && guestsData && guestsData.length > 0) {
+        return guestsData.map((g: any) => {
           const table = g.table_id ? tableMap.get(g.table_id) : null;
           return {
             name: g.name,
@@ -65,7 +75,7 @@ export async function lookupGuestPublic(nameQuery: string): Promise<SanitizedLoo
         });
       }
     } catch (err) {
-      console.warn('Supabase lookup failed, falling back to local sanitized cache:', err);
+      console.warn('Supabase lookup failed or timed out, falling back to local sanitized cache:', err);
     }
   }
 
