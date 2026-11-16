@@ -1022,16 +1022,28 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         prev.map((g) => (guestUpdates.has(g.id) ? { ...g, table_id: guestUpdates.get(g.id)! } : g))
       );
 
-      const client = getSupabase();
+      // Group guest updates by destination table for optimal batch updates
+      const tableToGuestsMap = new Map<string, string[]>();
       for (const [gid, tid] of guestUpdates.entries()) {
+        const list = tableToGuestsMap.get(tid) || [];
+        list.push(gid);
+        tableToGuestsMap.set(tid, list);
+      }
+
+      const client = getSupabase();
+      for (const [tid, gids] of tableToGuestsMap.entries()) {
         if (client && isOnline) {
           try {
-            await client.from('guests').update({ table_id: tid }).eq('id', gid);
+            await client.from('guests').update({ table_id: tid }).in('id', gids);
           } catch (err) {
-            enqueueOfflineAction({ action: 'UPSERT_GUEST', payload: { id: gid, table_id: tid } });
+            for (const gid of gids) {
+              enqueueOfflineAction({ action: 'UPDATE_GUEST', guestId: gid, payload: { table_id: tid } });
+            }
           }
         } else {
-          enqueueOfflineAction({ action: 'UPSERT_GUEST', payload: { id: gid, table_id: tid } });
+          for (const gid of gids) {
+            enqueueOfflineAction({ action: 'UPDATE_GUEST', guestId: gid, payload: { table_id: tid } });
+          }
         }
       }
     }
@@ -1041,19 +1053,30 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // 1. Reset Seating: unassign all guests
   const resetSeating = async (): Promise<void> => {
+    const allGuestIds = guests.map((g) => g.id);
     setGuests((prev) => prev.map((g) => ({ ...g, table_id: null })));
     const client = getSupabase();
     if (client && isOnline) {
       try {
         await client.from('guests').update({ table_id: null }).neq('id', '00000000-0000-0000-0000-000000000000');
       } catch (err) {
-        console.warn('Failed to reset seating on Supabase:', err);
+        for (const gid of allGuestIds) {
+          enqueueOfflineAction({ action: 'UPDATE_GUEST', guestId: gid, payload: { table_id: null } });
+        }
+      }
+    } else {
+      for (const gid of allGuestIds) {
+        enqueueOfflineAction({ action: 'UPDATE_GUEST', guestId: gid, payload: { table_id: null } });
       }
     }
   };
 
   // 2. Clear Venue Layout: delete all tables and landmarks, unassign all guests, keep guest roster & groups
   const clearVenueLayout = async (): Promise<void> => {
+    const tableIdsToDelete = tables.map((t) => t.id);
+    const landmarkIdsToDelete = landmarks.map((l) => l.id);
+    const allGuestIds = guests.map((g) => g.id);
+
     setTables([]);
     setLandmarks([]);
     setGuests((prev) => prev.map((g) => ({ ...g, table_id: null })));
@@ -1069,8 +1092,14 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
           client.from('guests').update({ table_id: null }).neq('id', '00000000-0000-0000-0000-000000000000'),
         ]);
       } catch (err) {
-        console.warn('Failed to clear venue layout on Supabase:', err);
+        tableIdsToDelete.forEach((id) => enqueueOfflineAction({ action: 'DELETE_TABLE', payload: { id } }));
+        landmarkIdsToDelete.forEach((id) => enqueueOfflineAction({ action: 'DELETE_LANDMARK', payload: { id } }));
+        allGuestIds.forEach((gid) => enqueueOfflineAction({ action: 'UPDATE_GUEST', guestId: gid, payload: { table_id: null } }));
       }
+    } else {
+      tableIdsToDelete.forEach((id) => enqueueOfflineAction({ action: 'DELETE_TABLE', payload: { id } }));
+      landmarkIdsToDelete.forEach((id) => enqueueOfflineAction({ action: 'DELETE_LANDMARK', payload: { id } }));
+      allGuestIds.forEach((gid) => enqueueOfflineAction({ action: 'UPDATE_GUEST', guestId: gid, payload: { table_id: null } }));
     }
   };
 
