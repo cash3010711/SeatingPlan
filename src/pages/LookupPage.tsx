@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { lookupGuestPublic, SanitizedLookupResult } from '../services/lookupService';
 import { Search, Heart, Sparkles, MapPin, Utensils, Baby, Gift, ShieldCheck, Loader2 } from 'lucide-react';
+import { formatTableNo } from '../utils/format';
 
 export const LookupPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -119,7 +120,7 @@ export const LookupPage: React.FC = () => {
                       您今日安排的桌次為：
                     </div>
                     <div className="text-2xl font-black text-rose-700 tracking-tight">
-                      {item.tableNo.length <= 3 ? `第 ${item.tableNo} 桌` : item.tableNo}
+                      {formatTableNo(item.tableNo)}
                     </div>
                     {item.tableName && (
                       <div className="text-xs font-semibold text-slate-600 bg-slate-50 px-2 py-1 rounded inline-block">

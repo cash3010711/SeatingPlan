@@ -9,7 +9,6 @@ import { SnapshotModal } from '../components/modals/SnapshotModal';
 import { QrCodeModal } from '../components/modals/QrCodeModal';
 import { SettingsModal } from '../components/modals/SettingsModal';
 import { useWedding } from '../context/WeddingContext';
-import { LandmarkType } from '../types';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -61,7 +60,7 @@ class CanvasErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySta
 }
 
 export const MainPage: React.FC = () => {
-  const { assignGuestToTable, addTable, addLandmark, tables } = useWedding();
+  const { assignGuestToTable } = useWedding();
 
   const [viewMode, setViewMode] = useState<'canvas' | 'board'>('canvas');
   const [drawerOpen, setDrawerOpen] = useState(true);
@@ -76,46 +75,6 @@ export const MainPage: React.FC = () => {
     await assignGuestToTable(guestId, tableId);
   };
 
-  const handleAddTable = async () => {
-    const tableIndex = tables.length + 1;
-    await addTable({
-      table_no: String(tableIndex),
-      name: `第 ${tableIndex} 桌`,
-      capacity: 10,
-      x: 350 + (tableIndex % 4) * 140,
-      y: 250 + Math.floor(tableIndex / 4) * 140,
-      is_backup: false,
-    });
-  };
-
-  const handleAddLandmark = async (type: LandmarkType, name: string) => {
-    if (viewMode !== 'canvas') {
-      setViewMode('canvas');
-    }
-    let w = 180;
-    let h = 60;
-    if (type === 'stage') {
-      w = 320;
-      h = 70;
-    } else if (type === 'aisle') {
-      w = 120;
-      h = 450;
-    } else if (type === 'pillar') {
-      w = 60;
-      h = 60;
-    }
-
-    await addLandmark({
-      name,
-      type,
-      width: w,
-      height: h,
-      x: 350,
-      y: 180,
-      rotation: 0,
-    });
-  };
-
   return (
     <div className="h-screen flex flex-col bg-slate-50 overflow-hidden select-none">
       {/* Navigation Header */}
@@ -126,8 +85,6 @@ export const MainPage: React.FC = () => {
         onOpenSnapshot={() => setShowSnapshot(true)}
         onOpenQr={() => setShowQr(true)}
         onOpenSettings={() => setShowSettings(true)}
-        onAddTable={handleAddTable}
-        onAddLandmark={handleAddLandmark}
       />
 
       {/* KPI Stats Ribbon */}

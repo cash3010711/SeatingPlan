@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useWedding } from '../context/WeddingContext';
 import { Guest, Table } from '../types';
+import { formatTableNo } from '../utils/format';
 import {
   Search,
   CheckCircle2,
@@ -254,11 +255,11 @@ export const UsherPage: React.FC = () => {
                       <div className="flex items-center gap-2 text-sm">
                         <span className="font-bold text-rose-700 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200">
                           {table
-                            ? table.table_no.length <= 3
-                              ? `第 ${table.table_no} 桌`
-                              : table.table_no
+                            ? formatTableNo(table.table_no)
                             : '⚠️ 尚未排桌'}
-                          {table?.name && <span className="font-normal text-slate-600 ml-1">({table.name})</span>}
+                          {table?.name && table.name !== formatTableNo(table.table_no) && (
+                            <span className="font-normal text-slate-600 ml-1">({table.name})</span>
+                          )}
                         </span>
                       </div>
 

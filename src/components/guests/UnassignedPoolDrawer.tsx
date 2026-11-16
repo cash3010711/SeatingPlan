@@ -3,6 +3,7 @@ import { useWedding } from '../../context/WeddingContext';
 import { Guest, SideType, MealType, CakeStatus } from '../../types';
 import { AddGuestModal } from './AddGuestModal';
 import { AddGroupModal } from './AddGroupModal';
+import { formatTableNo, formatTableLabel } from '../../utils/format';
 import {
   Search,
   Filter,
@@ -312,7 +313,7 @@ export const UnassignedPoolDrawer: React.FC<UnassignedPoolDrawerProps> = ({
                     <option value="">批次排入...</option>
                     {tables.map((t) => (
                       <option key={t.id} value={t.id}>
-                        第 {t.table_no} 桌
+                        {formatTableLabel(t.table_no, t.name)}
                       </option>
                     ))}
                   </select>
@@ -370,7 +371,7 @@ export const UnassignedPoolDrawer: React.FC<UnassignedPoolDrawerProps> = ({
                         <option value="">整家帶入...</option>
                         {tables.map((t) => (
                           <option key={t.id} value={t.id}>
-                            第 {t.table_no} 桌 ({t.name || '無名'})
+                            {formatTableLabel(t.table_no, t.name)}
                           </option>
                         ))}
                       </select>
@@ -647,7 +648,7 @@ const GuestCardItem: React.FC<GuestCardItemProps> = ({
           <option value="">指派至...</option>
           {tables.map((t) => (
             <option key={t.id} value={t.id}>
-              第 {t.table_no} 桌
+              {formatTableLabel(t.table_no, t.name)}
             </option>
           ))}
         </select>

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useWedding } from '../../context/WeddingContext';
 import { TableNode } from './TableNode';
 import { LandmarkNode } from './LandmarkNode';
@@ -47,37 +47,91 @@ export const WeddingCanvas: React.FC<WeddingCanvasProps> = ({ onDropGuestToTable
 
   // Pan interaction
   const handleMouseDown = (e: React.MouseEvent) => {
-    // Only pan if clicking canvas background directly
-    if (e.target === canvasRef.current || (e.target as HTMLElement).classList.contains('canvas-bg')) {
-      setIsPanning(true);
-      setStartPan({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+    // Only allow left click (button 0) or middle click (button 1)
+    if (e.button !== 0 && e.button !== 1) return;
+
+    // Don't pan if clicking inside floating controls, canvas nodes, inputs, or buttons
+    const target = e.target as HTMLElement;
+    if (
+      target.closest('.canvas-floating-controls') ||
+      target.closest('.canvas-node') ||
+      target.closest('button') ||
+      target.closest('input')
+    ) {
+      return;
     }
+
+    setIsPanning(true);
+    setStartPan({ x: e.clientX - pan.x, y: e.clientY - pan.y });
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
+  useEffect(() => {
     if (!isPanning) return;
-    setPan({
-      x: e.clientX - startPan.x,
-      y: e.clientY - startPan.y,
-    });
-  };
 
-  const handleMouseUp = () => {
-    setIsPanning(false);
-  };
+    const handleMouseMove = (e: MouseEvent) => {
+      setPan({
+        x: e.clientX - startPan.x,
+        y: e.clientY - startPan.y,
+      });
+    };
 
-  // Wheel zoom
+    const handleMouseUp = () => {
+      setIsPanning(false);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isPanning, startPan]);
+
+  // Wheel zoom centered on cursor
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
-    const zoomFactor = -e.deltaY * 0.001;
-    setZoom((prevZoom) => {
-      const nextZoom = Math.min(Math.max(prevZoom + zoomFactor, 0.4), 2.2);
-      return Number(nextZoom.toFixed(2));
-    });
+    if (!canvasRef.current) return;
+
+    const rect = canvasRef.current.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    const contentX = (mouseX - pan.x) / zoom;
+    const contentY = (mouseY - pan.y) / zoom;
+
+    const zoomFactor = -e.deltaY * 0.0015;
+    const nextZoom = Math.min(Math.max(zoom + zoomFactor, 0.4), 2.5);
+    const roundedZoom = Number(nextZoom.toFixed(2));
+
+    const nextPanX = mouseX - contentX * roundedZoom;
+    const nextPanY = mouseY - contentY * roundedZoom;
+
+    setZoom(roundedZoom);
+    setPan({ x: Math.round(nextPanX), y: Math.round(nextPanY) });
   };
 
-  const handleZoomIn = () => setZoom((z) => Math.min(Number((z + 0.15).toFixed(2)), 2.2));
-  const handleZoomOut = () => setZoom((z) => Math.max(Number((z - 0.15).toFixed(2)), 0.4));
+  const zoomAtCenter = (factor: number) => {
+    if (!canvasRef.current) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+
+    const contentX = (centerX - pan.x) / zoom;
+    const contentY = (centerY - pan.y) / zoom;
+
+    const nextZoom = Math.min(Math.max(zoom + factor, 0.4), 2.5);
+    const roundedZoom = Number(nextZoom.toFixed(2));
+
+    const nextPanX = centerX - contentX * roundedZoom;
+    const nextPanY = centerY - contentY * roundedZoom;
+
+    setZoom(roundedZoom);
+    setPan({ x: Math.round(nextPanX), y: Math.round(nextPanY) });
+  };
+
+  const handleZoomIn = () => zoomAtCenter(0.15);
+  const handleZoomOut = () => zoomAtCenter(-0.15);
   const handleResetView = () => {
     setZoom(1);
     setPan({ x: 40, y: 40 });
@@ -88,7 +142,7 @@ export const WeddingCanvas: React.FC<WeddingCanvasProps> = ({ onDropGuestToTable
     const tableIndex = tables.length + 1;
     await addTable({
       table_no: String(tableIndex),
-      name: `第 ${tableIndex} 桌`,
+      name: '',
       capacity: 10,
       x: Math.round(-pan.x / zoom + 350 + (tableIndex % 4) * 140),
       y: Math.round(-pan.y / zoom + 300 + Math.floor(tableIndex / 4) * 140),
@@ -153,10 +207,10 @@ export const WeddingCanvas: React.FC<WeddingCanvasProps> = ({ onDropGuestToTable
   return (
     <div
       ref={canvasRef}
-      className="relative flex-1 self-stretch min-h-0 overflow-hidden select-none bg-slate-100 dot-grid cursor-grab active:cursor-grabbing canvas-bg"
+      className={`relative flex-1 self-stretch min-h-0 overflow-hidden select-none bg-slate-100 dot-grid canvas-bg ${
+        isPanning ? 'cursor-grabbing' : 'cursor-grab'
+      }`}
       onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
       onWheel={handleWheel}
     >
       {/* Zoom & Pan Container */}
@@ -168,7 +222,9 @@ export const WeddingCanvas: React.FC<WeddingCanvasProps> = ({ onDropGuestToTable
           width: '2600px',
           height: '2200px',
         }}
-        className="absolute top-0 left-0 transition-transform duration-75 pointer-events-auto"
+        className={`absolute top-0 left-0 pointer-events-auto ${
+          isPanning ? '' : 'transition-transform duration-75'
+        }`}
       >
         {/* Landmarks */}
         {landmarks.map((landmark) => (
@@ -199,7 +255,7 @@ export const WeddingCanvas: React.FC<WeddingCanvasProps> = ({ onDropGuestToTable
       </div>
 
       {/* Canvas Floating Controls */}
-      <div className="absolute bottom-5 left-5 z-20 flex flex-wrap items-center gap-1.5 bg-white/95 backdrop-blur-md p-1.5 rounded-2xl shadow-lg border border-slate-200/90 text-xs">
+      <div className="canvas-floating-controls absolute bottom-5 left-5 z-20 flex flex-wrap items-center gap-1.5 bg-white/95 backdrop-blur-md p-1.5 rounded-2xl shadow-lg border border-slate-200/90 text-xs">
         {/* Zoom In/Out */}
         <div className="flex items-center bg-slate-100 rounded-xl p-0.5">
           <button
@@ -249,7 +305,7 @@ export const WeddingCanvas: React.FC<WeddingCanvasProps> = ({ onDropGuestToTable
           title="新增一張圓桌 (預設 10 人)"
         >
           <Plus className="w-4 h-4" />
-          <span>新增桌位</span>
+          <span>新增桌子</span>
         </button>
 
         {/* Add Landmark Dropdown */}

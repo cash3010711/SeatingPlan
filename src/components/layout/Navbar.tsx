@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -12,12 +12,8 @@ import {
   WifiOff,
   RefreshCw,
   Sparkles,
-  Plus,
-  MapPin,
-  ChevronDown,
 } from 'lucide-react';
 import { useWedding } from '../../context/WeddingContext';
-import { LandmarkType } from '../../types';
 
 interface NavbarProps {
   viewMode: 'canvas' | 'board';
@@ -26,8 +22,6 @@ interface NavbarProps {
   onOpenSnapshot: () => void;
   onOpenQr: () => void;
   onOpenSettings: () => void;
-  onAddTable: () => void;
-  onAddLandmark: (type: LandmarkType, name: string) => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -37,11 +31,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenSnapshot,
   onOpenQr,
   onOpenSettings,
-  onAddTable,
-  onAddLandmark,
 }) => {
   const { isOnline, isSyncing, isSupabaseActive } = useWedding();
-  const [landmarkDropdown, setLandmarkDropdown] = useState(false);
 
   return (
     <header className="bg-white/95 backdrop-blur border-b border-rose-100 shadow-sm sticky top-0 z-30">
@@ -91,98 +82,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span className="hidden sm:inline">看板模式</span>
             <span className="sm:hidden">看板</span>
           </button>
-        </div>
-
-        {/* Primary Creation Actions (Add Table & Add Landmark) */}
-        <div className="flex items-center gap-1.5">
-          <button
-            onClick={onAddTable}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg shadow-sm shadow-rose-200 transition-colors"
-            title="新增一張桌子 (可自訂桌號與容納人數)"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>新增桌子</span>
-          </button>
-
-          <div className="relative">
-            <button
-              onClick={() => setLandmarkDropdown(!landmarkDropdown)}
-              className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold rounded-lg border border-slate-200 transition-colors"
-              title="新增會場地標 (舞台、紅毯、柱子、收禮桌)"
-            >
-              <MapPin className="w-3.5 h-3.5 text-rose-500" />
-              <span>新增地標</span>
-              <ChevronDown className="w-3 h-3 text-slate-500" />
-            </button>
-
-            {landmarkDropdown && (
-              <div
-                className="absolute top-10 left-0 w-44 bg-white rounded-xl shadow-xl border border-slate-200 py-1 z-50 animate-fadeIn"
-                onMouseLeave={() => setLandmarkDropdown(false)}
-              >
-                <button
-                  onClick={() => {
-                    onAddLandmark('stage', '主舞台 / 大螢幕');
-                    setLandmarkDropdown(false);
-                  }}
-                  className="w-full text-left px-3 py-2 hover:bg-rose-50 hover:text-rose-700 text-xs font-semibold flex items-center justify-between"
-                >
-                  <span>主舞台 (Stage)</span>
-                  <span className="text-[10px] text-slate-400">長方</span>
-                </button>
-                <button
-                  onClick={() => {
-                    onAddLandmark('aisle', '進場紅毯走道');
-                    setLandmarkDropdown(false);
-                  }}
-                  className="w-full text-left px-3 py-2 hover:bg-rose-50 hover:text-rose-700 text-xs font-semibold flex items-center justify-between"
-                >
-                  <span>紅毯走道 (Aisle)</span>
-                  <span className="text-[10px] text-slate-400">走道</span>
-                </button>
-                <button
-                  onClick={() => {
-                    onAddLandmark('door', '宴會廳正門');
-                    setLandmarkDropdown(false);
-                  }}
-                  className="w-full text-left px-3 py-2 hover:bg-rose-50 hover:text-rose-700 text-xs font-semibold flex items-center justify-between"
-                >
-                  <span>大門出入口 (Door)</span>
-                  <span className="text-[10px] text-slate-400">拱門</span>
-                </button>
-                <button
-                  onClick={() => {
-                    onAddLandmark('pillar', '場地樑柱');
-                    setLandmarkDropdown(false);
-                  }}
-                  className="w-full text-left px-3 py-2 hover:bg-rose-50 hover:text-rose-700 text-xs font-semibold flex items-center justify-between"
-                >
-                  <span>樑柱遮蔽 (Pillar)</span>
-                  <span className="text-[10px] text-slate-400">圓柱</span>
-                </button>
-                <button
-                  onClick={() => {
-                    onAddLandmark('reception', '收禮接待桌');
-                    setLandmarkDropdown(false);
-                  }}
-                  className="w-full text-left px-3 py-2 hover:bg-rose-50 hover:text-rose-700 text-xs font-semibold flex items-center justify-between"
-                >
-                  <span>收禮桌 (Reception)</span>
-                  <span className="text-[10px] text-slate-400">長桌</span>
-                </button>
-                <button
-                  onClick={() => {
-                    onAddLandmark('audio', '音控與燈光台');
-                    setLandmarkDropdown(false);
-                  }}
-                  className="w-full text-left px-3 py-2 hover:bg-rose-50 hover:text-rose-700 text-xs font-semibold flex items-center justify-between"
-                >
-                  <span>音控燈光台 (Audio)</span>
-                  <span className="text-[10px] text-slate-400">控制台</span>
-                </button>
-              </div>
-            )}
-          </div>
         </div>
 
         {/* Action buttons */}

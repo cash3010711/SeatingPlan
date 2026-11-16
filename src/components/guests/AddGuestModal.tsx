@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useWedding } from '../../context/WeddingContext';
 import { SideType, MealType, CakeStatus } from '../../types';
 import { X, UserPlus } from 'lucide-react';
+import { formatTableLabel } from '../../utils/format';
 
 interface AddGuestModalProps {
   onClose: () => void;
@@ -154,7 +155,7 @@ export const AddGuestModal: React.FC<AddGuestModalProps> = ({ onClose }) => {
               <option value="">放入未指派賓客池 (暫不排桌)</option>
               {tables.map((t) => (
                 <option key={t.id} value={t.id}>
-                  第 {t.table_no} 桌 ({t.name || '無名'})
+                  {formatTableLabel(t.table_no, t.name)}
                 </option>
               ))}
             </select>

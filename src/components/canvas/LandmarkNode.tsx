@@ -134,7 +134,7 @@ export const LandmarkNode: React.FC<LandmarkNodeProps> = ({
         height: `${landmark.height}px`,
         cursor: isDragging ? 'grabbing' : 'grab',
       }}
-      className={`absolute top-0 left-0 select-none transition-shadow rounded-xl flex items-center justify-center p-2 text-center text-xs font-bold ${typeStyles}`}
+      className={`absolute top-0 left-0 select-none transition-shadow rounded-xl flex items-center justify-center p-2 text-center text-xs font-bold canvas-node ${typeStyles}`}
       onMouseDown={handleMouseDown}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Table, Guest } from '../../types';
 import { useWedding } from '../../context/WeddingContext';
+import { formatTableNo, formatTableLabel } from '../../utils/format';
 import {
   X,
   Trash2,
@@ -52,7 +53,7 @@ export const TableDetailModal: React.FC<TableDetailModalProps> = ({ table, onClo
   };
 
   const handleDeleteTable = async () => {
-    if (window.confirm(`確定要刪除「第 ${table.table_no} 桌」嗎？桌內 ${tableGuests.length} 位賓客將回到未排賓客池。`)) {
+    if (window.confirm(`確定要刪除「${formatTableNo(table.table_no)}」嗎？桌內 ${tableGuests.length} 位賓客將回到未排賓客池。`)) {
       await deleteTable(table.id);
       onClose();
     }
@@ -83,10 +84,10 @@ export const TableDetailModal: React.FC<TableDetailModalProps> = ({ table, onClo
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-rose-50 to-white">
           <div className="flex items-center gap-2">
             <span className="text-xl font-black text-rose-700">
-              {table.table_no.length <= 3 ? `第 ${table.table_no} 桌` : table.table_no}
+              {formatTableNo(table.table_no)}
             </span>
             <span className="text-sm font-semibold text-slate-700">
-              {table.name ? `(${table.name})` : ''}
+              {table.name && table.name !== formatTableNo(table.table_no) ? `(${table.name})` : ''}
             </span>
             {isBackup && (
               <span className="bg-slate-200 text-slate-700 text-xs px-2 py-0.5 rounded-full font-bold">
@@ -308,7 +309,7 @@ export const TableDetailModal: React.FC<TableDetailModalProps> = ({ table, onClo
                               .filter((t) => t.id !== table.id)
                               .map((t) => (
                                 <option key={t.id} value={t.id}>
-                                  第 {t.table_no} 桌 ({t.name || '無名'})
+                                  {formatTableLabel(t.table_no, t.name)}
                                 </option>
                               ))}
                           </select>

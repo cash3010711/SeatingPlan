@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Table, Guest } from '../../types';
 import { AlertTriangle, Baby, Gift, Leaf } from 'lucide-react';
+import { formatTableNo } from '../../utils/format';
 
 interface TableNodeProps {
   table: Table;
@@ -130,7 +131,7 @@ export const TableNode: React.FC<TableNodeProps> = ({
         height: isCircle ? `${size}px` : `${rectHeight}px`,
         cursor: isDragging ? 'grabbing' : 'grab',
       }}
-      className={`absolute top-0 left-0 select-none transition-shadow ${
+      className={`absolute top-0 left-0 select-none transition-shadow canvas-node ${
         isCircle ? 'rounded-full' : 'rounded-2xl'
       } ${
         isOverCapacity
@@ -156,7 +157,7 @@ export const TableNode: React.FC<TableNodeProps> = ({
             isMainTable ? 'text-amber-800 text-base' : 'text-slate-800 text-sm'
           }`}
         >
-          {table.table_no.length <= 3 ? `第 ${table.table_no} 桌` : table.table_no}
+          {formatTableNo(table.table_no)}
         </span>
         {table.is_backup && (
           <span className="bg-slate-200 text-slate-700 text-[9px] px-1 py-0.5 rounded font-bold">
@@ -167,7 +168,7 @@ export const TableNode: React.FC<TableNodeProps> = ({
 
       {/* Table custom name */}
       <div className="text-[10px] text-slate-500 truncate max-w-[90px] font-medium my-0.5" title={table.name}>
-        {table.name || (table.is_backup ? '預備桌' : '—')}
+        {table.name && table.name !== formatTableNo(table.table_no) ? table.name : (table.is_backup ? '預備桌' : '—')}
       </div>
 
       {/* Seated / Capacity count badge */}

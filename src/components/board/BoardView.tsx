@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useWedding } from '../../context/WeddingContext';
 import { Guest, Table } from '../../types';
+import { formatTableNo } from '../../utils/format';
 import {
   Users,
   AlertTriangle,
@@ -70,8 +71,41 @@ export const BoardView: React.FC = () => {
     setQuickInputTableId(null);
   };
 
+  const boardRef = useRef<HTMLDivElement>(null);
+
+  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    // If vertical delta is 0 or user is using trackpad horizontal gesture, let default happen
+    if (e.deltaY === 0) return;
+
+    // Check if the wheel event occurred inside a vertically scrollable container that can scroll
+    let target = e.target as HTMLElement | null;
+    let canScrollVertically = false;
+
+    while (target && target !== boardRef.current) {
+      const style = window.getComputedStyle(target);
+      const overflowY = style.overflowY;
+      if (overflowY === 'auto' || overflowY === 'scroll') {
+        const canScrollDown = e.deltaY > 0 && target.scrollTop + target.clientHeight < target.scrollHeight - 1;
+        const canScrollUp = e.deltaY < 0 && target.scrollTop > 1;
+        if (canScrollDown || canScrollUp) {
+          canScrollVertically = true;
+          break;
+        }
+      }
+      target = target.parentElement;
+    }
+
+    if (!canScrollVertically && boardRef.current) {
+      boardRef.current.scrollLeft += e.deltaY;
+    }
+  };
+
   return (
-    <div className="flex-1 overflow-x-auto p-4 bg-slate-100 flex gap-4 items-start h-[calc(100vh-8rem)]">
+    <div
+      ref={boardRef}
+      onWheel={handleWheel}
+      className="flex-1 overflow-x-auto p-4 bg-slate-100 flex gap-4 items-start h-[calc(100vh-8rem)]"
+    >
       {/* Unassigned Pool Column */}
       <div
         onDragOver={(e) => handleDragOver(e, 'unassigned')}
@@ -171,7 +205,7 @@ export const BoardView: React.FC = () => {
               <div>
                 <div className="flex items-center gap-1.5">
                   <span className="font-bold text-sm text-slate-800">
-                    {table.table_no.length <= 3 ? `第 ${table.table_no} 桌` : table.table_no}
+                    {formatTableNo(table.table_no)}
                   </span>
                   {table.is_backup && (
                     <span className="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.2 rounded font-bold">
@@ -180,7 +214,7 @@ export const BoardView: React.FC = () => {
                   )}
                 </div>
                 <div className="text-[11px] text-slate-500 truncate max-w-[150px]">
-                  {table.name || '—'}
+                  {table.name && table.name !== formatTableNo(table.table_no) ? table.name : '—'}
                 </div>
               </div>
 
@@ -261,7 +295,7 @@ export const BoardView: React.FC = () => {
         onClick={() =>
           addTable({
             table_no: String(tables.length + 1),
-            name: `第 ${tables.length + 1} 桌`,
+            name: '',
             capacity: 10,
           })
         }
