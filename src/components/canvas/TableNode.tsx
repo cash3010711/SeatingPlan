@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Table, Guest } from '../../types';
-import { AlertTriangle, Baby, Gift, Leaf } from 'lucide-react';
+import { AlertTriangle, Baby, Gift, Leaf, Trash2 } from 'lucide-react';
 import { formatTableNo } from '../../utils/format';
 
 interface TableNodeProps {
@@ -11,6 +11,7 @@ interface TableNodeProps {
   onUpdatePosition: (id: string, x: number, y: number) => void;
   onClick: (table: Table) => void;
   onDropGuest: (tableId: string, guestId: string) => void;
+  onDeleteTable?: (tableId: string) => void;
 }
 
 export const TableNode: React.FC<TableNodeProps> = ({
@@ -21,9 +22,11 @@ export const TableNode: React.FC<TableNodeProps> = ({
   onUpdatePosition,
   onClick,
   onDropGuest,
+  onDeleteTable,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   const [currentPos, setCurrentPos] = useState({ x: table.x, y: table.y });
   const posRef = useRef({ x: table.x, y: table.y });
   const dragOffsetRef = useRef({ x: 0, y: 0 });
@@ -143,6 +146,8 @@ export const TableNode: React.FC<TableNodeProps> = ({
           : 'border-2 border-rose-200 bg-white/95 shadow-sm hover:shadow-md'
       } ${isDragOver ? 'ring-4 ring-rose-400 ring-offset-2 scale-105' : ''} flex flex-col items-center justify-center p-2 text-center z-10`}
       onMouseDown={handleMouseDown}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       onClick={() => {
         if (!hasMovedRef.current) onClick(table);
       }}
@@ -150,6 +155,23 @@ export const TableNode: React.FC<TableNodeProps> = ({
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
+      {/* Quick Delete on Hover */}
+      {isHovered && !isDragging && onDeleteTable && (
+        <button
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (window.confirm(`確定要刪除「${formatTableNo(table.table_no)}」嗎？桌內 ${seatedCount} 位賓客將回到未排座位池。`)) {
+              onDeleteTable(table.id);
+            }
+          }}
+          className="absolute -top-1.5 -right-1.5 p-1 bg-white text-slate-400 hover:text-white hover:bg-rose-600 rounded-full shadow-md border border-slate-200 hover:border-rose-600 transition-all z-20 hover:scale-110"
+          title={`刪除「${formatTableNo(table.table_no)}」`}
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+      )}
+
       {/* Table No / Name Header */}
       <div className="flex items-center gap-1 leading-none">
         <span

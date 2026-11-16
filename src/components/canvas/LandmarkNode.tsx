@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Landmark } from '../../types';
-import { RotateCw, Trash2, Mic, DoorOpen, Disc, ShieldAlert, Heart } from 'lucide-react';
+import { RotateCw, Trash2, Mic, DoorOpen, Disc, ShieldAlert, Heart, Edit2 } from 'lucide-react';
 
 interface LandmarkNodeProps {
   landmark: Landmark;
@@ -24,6 +24,21 @@ export const LandmarkNode: React.FC<LandmarkNodeProps> = ({
   const posRef = useRef({ x: landmark.x, y: landmark.y });
   const dragOffsetRef = useRef({ x: 0, y: 0 });
   const [isHovered, setIsHovered] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(landmark.name);
+
+  useEffect(() => {
+    setEditName(landmark.name);
+  }, [landmark.name]);
+
+  const handleSaveName = () => {
+    setIsEditing(false);
+    if (editName.trim() && editName.trim() !== landmark.name) {
+      onUpdateLandmark(landmark.id, { name: editName.trim() });
+    } else {
+      setEditName(landmark.name);
+    }
+  };
   const hasMovedRef = useRef(false);
   const nodeRef = useRef<HTMLDivElement>(null);
 
@@ -139,19 +154,58 @@ export const LandmarkNode: React.FC<LandmarkNodeProps> = ({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="flex items-center gap-1.5 pointer-events-none truncate px-1">
-        <IconComponent className="w-3.5 h-3.5 shrink-0 opacity-80" />
-        <span className="truncate">{landmark.name}</span>
-      </div>
+      {isEditing ? (
+        <input
+          autoFocus
+          type="text"
+          value={editName}
+          onChange={(e) => setEditName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') handleSaveName();
+            if (e.key === 'Escape') {
+              setIsEditing(false);
+              setEditName(landmark.name);
+            }
+          }}
+          onBlur={handleSaveName}
+          onMouseDown={(e) => e.stopPropagation()}
+          className="px-1.5 py-0.5 text-xs rounded bg-white text-slate-900 border border-rose-400 font-bold focus:outline-none focus:ring-1 focus:ring-rose-500 w-full max-w-[90%] text-center shadow-xs"
+        />
+      ) : (
+        <div
+          onDoubleClick={(e) => {
+            e.stopPropagation();
+            setIsEditing(true);
+          }}
+          className="flex items-center gap-1.5 truncate px-1 cursor-text"
+          title="按兩下可修改地標名稱"
+        >
+          <IconComponent className="w-3.5 h-3.5 shrink-0 opacity-80" />
+          <span className="truncate">{landmark.name}</span>
+        </div>
+      )}
 
       {/* Floating Toolbar when hovered */}
-      {isHovered && !isDragging && (
+      {isHovered && !isDragging && !isEditing && (
         <div
           className="absolute -top-7 right-0 flex items-center gap-1 bg-white/95 text-slate-700 px-1.5 py-0.5 rounded-lg shadow-md border border-slate-200 z-20"
           style={{ transform: `rotate(${-landmark.rotation}deg)` }}
+          onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
         >
           <button
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsEditing(true);
+            }}
+            className="p-1 hover:text-blue-600 hover:bg-blue-50 rounded"
+            title="編輯地標名稱 (亦可雙擊地標)"
+          >
+            <Edit2 className="w-3 h-3" />
+          </button>
+          <button
+            onMouseDown={(e) => e.stopPropagation()}
             onClick={handleRotate}
             className="p-1 hover:text-rose-600 hover:bg-rose-50 rounded"
             title="順時針旋轉 90 度"
@@ -159,6 +213,7 @@ export const LandmarkNode: React.FC<LandmarkNodeProps> = ({
             <RotateCw className="w-3 h-3" />
           </button>
           <button
+            onMouseDown={(e) => e.stopPropagation()}
             onClick={handleDelete}
             className="p-1 hover:text-red-600 hover:bg-red-50 rounded"
             title="刪除此地標"

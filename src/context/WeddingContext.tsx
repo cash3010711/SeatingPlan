@@ -59,9 +59,13 @@ interface WeddingContextType {
   createSnapshot: (name: string) => Promise<Snapshot>;
   restoreSnapshot: (snapshotId: string) => Promise<void>;
   deleteSnapshot: (snapshotId: string) => Promise<void>;
-  // Config & Reset
+  // Config & Reset & Automation
   updateConfig: (url: string, key: string) => void;
   resetToMockData: () => void;
+  autoAssignSeats: () => Promise<{ assignedGuests: number; tablesUsed: number }>;
+  resetSeating: () => Promise<void>;
+  clearVenueLayout: () => Promise<void>;
+  restoreDefaultData: () => Promise<void>;
 }
 
 const WeddingContext = createContext<WeddingContextType | undefined>(undefined);
@@ -909,6 +913,189 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     saveLandmarksToStorage(initialLandmarks);
   };
 
+  // Smart Auto-Seating Engine
+  const autoAssignSeats = async (): Promise<{ assignedGuests: number; tablesUsed: number }> => {
+    // 1. Get non-backup tables
+    const activeTables = tables.filter((t) => !t.is_backup);
+    if (activeTables.length === 0) return { assignedGuests: 0, tablesUsed: 0 };
+
+    // Track table remaining capacity and current assignments
+    const tableSeats = new Map<string, { table: Table; guestIds: string[]; capacity: number }>();
+    activeTables.forEach((t) => {
+      const seated = guests.filter((g) => g.table_id === t.id).map((g) => g.id);
+      tableSeats.set(t.id, {
+        table: t,
+        guestIds: seated,
+        capacity: t.capacity,
+      });
+    });
+
+    // Unassigned guests
+    const unassigned = guests.filter((g) => g.table_id === null);
+    if (unassigned.length === 0) return { assignedGuests: 0, tablesUsed: 0 };
+
+    // Separate unassigned into:
+    // A. Household Groups (guests with group_id)
+    // B. Individual guests
+    const groupMap = new Map<string, Guest[]>();
+    const individualGuests: Guest[] = [];
+
+    unassigned.forEach((g) => {
+      if (g.group_id) {
+        const list = groupMap.get(g.group_id) || [];
+        list.push(g);
+        groupMap.set(g.group_id, list);
+      } else {
+        individualGuests.push(g);
+      }
+    });
+
+    const guestUpdates = new Map<string, string>(); // guestId -> destTableId
+    const usedTableIds = new Set<string>();
+
+    // Helper: Find a table with enough capacity
+    const findTableForSize = (size: number, preferredTag?: string, preferredSide?: string): string | null => {
+      let bestTableId: string | null = null;
+      let minRemaining = Infinity;
+
+      for (const [tId, data] of tableSeats.entries()) {
+        const remaining = data.capacity - data.guestIds.length;
+        if (remaining >= size) {
+          const seatedGuests = data.guestIds.map((gid) => guests.find((g) => g.id === gid) || unassigned.find((g) => g.id === gid));
+          const hasMatchingTag = preferredTag && seatedGuests.some((g) => g?.category_tag === preferredTag);
+          const hasMatchingSide = preferredSide && seatedGuests.some((g) => g?.side === preferredSide);
+
+          if (hasMatchingTag || hasMatchingSide) {
+            return tId;
+          }
+
+          if (remaining < minRemaining) {
+            minRemaining = remaining;
+            bestTableId = tId;
+          }
+        }
+      }
+
+      return bestTableId;
+    };
+
+    // Step A: Assign household groups (Do NOT break up families!)
+    for (const [_groupId, members] of groupMap.entries()) {
+      const groupSize = members.length;
+      const firstMember = members[0];
+      const targetTableId = findTableForSize(groupSize, firstMember.category_tag, firstMember.side);
+
+      if (targetTableId) {
+        const tData = tableSeats.get(targetTableId)!;
+        members.forEach((m) => {
+          guestUpdates.set(m.id, targetTableId);
+          tData.guestIds.push(m.id);
+        });
+        usedTableIds.add(targetTableId);
+      }
+    }
+
+    // Step B: Assign individual guests clustered by (side + category_tag)
+    const clusterMap = new Map<string, Guest[]>();
+    individualGuests.forEach((g) => {
+      const clusterKey = `${g.side}__${g.category_tag || 'none'}`;
+      const list = clusterMap.get(clusterKey) || [];
+      list.push(g);
+      clusterMap.set(clusterKey, list);
+    });
+
+    for (const [_key, clusterMembers] of clusterMap.entries()) {
+      for (const g of clusterMembers) {
+        const targetTableId = findTableForSize(1, g.category_tag, g.side);
+        if (targetTableId) {
+          const tData = tableSeats.get(targetTableId)!;
+          guestUpdates.set(g.id, targetTableId);
+          tData.guestIds.push(g.id);
+          usedTableIds.add(targetTableId);
+        }
+      }
+    }
+
+    // Apply updates
+    if (guestUpdates.size > 0) {
+      setGuests((prev) =>
+        prev.map((g) => (guestUpdates.has(g.id) ? { ...g, table_id: guestUpdates.get(g.id)! } : g))
+      );
+
+      const client = getSupabase();
+      for (const [gid, tid] of guestUpdates.entries()) {
+        if (client && isOnline) {
+          try {
+            await client.from('guests').update({ table_id: tid }).eq('id', gid);
+          } catch (err) {
+            enqueueOfflineAction({ action: 'UPSERT_GUEST', payload: { id: gid, table_id: tid } });
+          }
+        } else {
+          enqueueOfflineAction({ action: 'UPSERT_GUEST', payload: { id: gid, table_id: tid } });
+        }
+      }
+    }
+
+    return { assignedGuests: guestUpdates.size, tablesUsed: usedTableIds.size };
+  };
+
+  // 1. Reset Seating: unassign all guests
+  const resetSeating = async (): Promise<void> => {
+    setGuests((prev) => prev.map((g) => ({ ...g, table_id: null })));
+    const client = getSupabase();
+    if (client && isOnline) {
+      try {
+        await client.from('guests').update({ table_id: null }).neq('id', '00000000-0000-0000-0000-000000000000');
+      } catch (err) {
+        console.warn('Failed to reset seating on Supabase:', err);
+      }
+    }
+  };
+
+  // 2. Clear Venue Layout: delete all tables and landmarks, unassign all guests, keep guest roster & groups
+  const clearVenueLayout = async (): Promise<void> => {
+    setTables([]);
+    setLandmarks([]);
+    setGuests((prev) => prev.map((g) => ({ ...g, table_id: null })));
+    saveTablesToStorage([]);
+    saveLandmarksToStorage([]);
+
+    const client = getSupabase();
+    if (client && isOnline) {
+      try {
+        await Promise.all([
+          client.from('tables').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
+          client.from('landmarks').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
+          client.from('guests').update({ table_id: null }).neq('id', '00000000-0000-0000-0000-000000000000'),
+        ]);
+      } catch (err) {
+        console.warn('Failed to clear venue layout on Supabase:', err);
+      }
+    }
+  };
+
+  // 3. Restore Default Data: restore initial mock demo data
+  const restoreDefaultData = async (): Promise<void> => {
+    resetToMockData();
+    const client = getSupabase();
+    if (client && isOnline) {
+      try {
+        await Promise.all([
+          client.from('tables').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
+          client.from('guests').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
+          client.from('groups').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
+          client.from('landmarks').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
+        ]);
+        if (initialTables.length) await client.from('tables').insert(initialTables);
+        if (initialGroups.length) await client.from('groups').insert(initialGroups);
+        if (initialGuests.length) await client.from('guests').insert(initialGuests);
+        if (initialLandmarks.length) await client.from('landmarks').insert(initialLandmarks);
+      } catch (err) {
+        console.warn('Failed to restore default data on Supabase:', err);
+      }
+    }
+  };
+
   return (
     <WeddingContext.Provider
       value={{
@@ -945,6 +1132,10 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         deleteSnapshot,
         updateConfig,
         resetToMockData,
+        autoAssignSeats,
+        resetSeating,
+        clearVenueLayout,
+        restoreDefaultData,
       }}
     >
       {children}

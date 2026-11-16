@@ -26,6 +26,7 @@ export const WeddingCanvas: React.FC<WeddingCanvasProps> = ({ onDropGuestToTable
     guests,
     landmarks,
     updateTable,
+    deleteTable,
     addTable,
     updateLandmark,
     deleteLandmark,
@@ -43,6 +44,19 @@ export const WeddingCanvas: React.FC<WeddingCanvasProps> = ({ onDropGuestToTable
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const landmarkDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close landmark dropdown when clicking outside
+  useEffect(() => {
+    if (!landmarkDropdown) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (landmarkDropdownRef.current && !landmarkDropdownRef.current.contains(e.target as Node)) {
+        setLandmarkDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [landmarkDropdown]);
 
 
   // Pan interaction
@@ -250,6 +264,7 @@ export const WeddingCanvas: React.FC<WeddingCanvasProps> = ({ onDropGuestToTable
             onUpdatePosition={(id, x, y) => updateTable(id, { x, y })}
             onClick={(t) => setSelectedTable(t)}
             onDropGuest={onDropGuestToTable}
+            onDeleteTable={deleteTable}
           />
         ))}
       </div>
@@ -309,7 +324,7 @@ export const WeddingCanvas: React.FC<WeddingCanvasProps> = ({ onDropGuestToTable
         </button>
 
         {/* Add Landmark Dropdown */}
-        <div className="relative">
+        <div ref={landmarkDropdownRef} className="relative">
           <button
             onClick={() => setLandmarkDropdown(!landmarkDropdown)}
             className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold rounded-xl transition-colors"

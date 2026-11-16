@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useWedding } from '../../context/WeddingContext';
 import { Guest, Table } from '../../types';
 import { formatTableNo } from '../../utils/format';
+import { TableDetailModal } from '../canvas/TableDetailModal';
 import {
   Users,
   AlertTriangle,
@@ -12,16 +13,24 @@ import {
   Gift,
   Leaf,
   Layers,
+  Settings,
+  Trash2,
 } from 'lucide-react';
 
 export const BoardView: React.FC = () => {
   const {
     tables,
     guests,
+    groups,
     assignGuestToTable,
+    assignGroupToTable,
     addTable,
+    deleteTable,
     addGuest,
+    deleteGroup,
   } = useWedding();
+
+  const [selectedTable, setSelectedTable] = useState<Table | null>(null);
 
   const [draggedGuestId, setDraggedGuestId] = useState<string | null>(null);
   const [activeDropColumn, setActiveDropColumn] = useState<string | null>(null);
@@ -218,7 +227,7 @@ export const BoardView: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <span
                   className={`text-xs px-2 py-0.5 rounded-full font-bold flex items-center gap-1 ${
                     isOver
@@ -243,6 +252,30 @@ export const BoardView: React.FC = () => {
                   title="快速加入賓客至此桌"
                 >
                   <Plus className="w-3.5 h-3.5" />
+                </button>
+
+                <button
+                  onClick={() => setSelectedTable(table)}
+                  className="p-1 hover:bg-slate-200 rounded text-slate-500 hover:text-slate-800 transition-colors"
+                  title="編輯此桌設定 (桌號、桌名、容納上限)"
+                >
+                  <Settings className="w-3.5 h-3.5" />
+                </button>
+
+                <button
+                  onClick={async () => {
+                    if (
+                      window.confirm(
+                        `確定要刪除「${formatTableNo(table.table_no)}」嗎？桌內 ${tableGuests.length} 位賓客將回到未排座位池。`
+                      )
+                    ) {
+                      await deleteTable(table.id);
+                    }
+                  }}
+                  className="p-1 hover:bg-rose-100 rounded text-slate-400 hover:text-rose-600 transition-colors"
+                  title={`刪除「${formatTableNo(table.table_no)}」`}
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
@@ -275,15 +308,87 @@ export const BoardView: React.FC = () => {
                   拖曳賓客至此桌入座
                 </div>
               ) : (
-                tableGuests.map((guest) => (
-                  <BoardGuestCard
-                    key={guest.id}
-                    guest={guest}
-                    onDragStart={handleDragStart}
-                    onUnassign={() => assignGuestToTable(guest.id, null)}
-                    showUnassign={true}
-                  />
-                ))
+                (() => {
+                  const tableGroupIds = Array.from(
+                    new Set(tableGuests.filter((g) => g.group_id).map((g) => g.group_id!))
+                  );
+                  const standaloneGuests = tableGuests.filter((g) => !g.group_id);
+
+                  return (
+                    <>
+                      {/* Household groups in this table */}
+                      {tableGroupIds.map((groupId) => {
+                        const grp = groups.find((g) => g.id === groupId);
+                        const groupMembers = tableGuests.filter((g) => g.group_id === groupId);
+
+                        return (
+                          <div
+                            key={groupId}
+                            className="bg-amber-50/70 rounded-xl border border-amber-200/90 p-2 space-y-1.5 shadow-2xs"
+                          >
+                            <div className="flex items-center justify-between pb-1 border-b border-amber-200/60">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <Users className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                                <span className="font-bold text-xs text-amber-900 truncate">
+                                  {grp?.name || '家庭群組'}
+                                </span>
+                                <span className="text-[10px] bg-amber-200/80 text-amber-800 px-1.5 py-0.2 rounded-full font-bold">
+                                  {groupMembers.length} 人
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => assignGroupToTable(groupId, null)}
+                                  className="p-1 text-slate-400 hover:text-amber-800 rounded hover:bg-amber-100 transition-colors"
+                                  title="整家移出此桌回到未排池"
+                                >
+                                  <UserMinus className="w-3 h-3" />
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    if (
+                                      window.confirm(
+                                        `確定要解散群組「${grp?.name || '家庭群組'}」嗎？成員將保留在此桌為個別獨立賓客。`
+                                      )
+                                    ) {
+                                      deleteGroup(groupId);
+                                    }
+                                  }}
+                                  className="p-1 text-slate-400 hover:text-red-600 rounded hover:bg-red-50 transition-colors"
+                                  title="解散家庭群組 (成員保留在此桌為個別獨立賓客)"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              </div>
+                            </div>
+                            <div className="space-y-1.5">
+                              {groupMembers.map((guest) => (
+                                <BoardGuestCard
+                                  key={guest.id}
+                                  guest={guest}
+                                  onDragStart={handleDragStart}
+                                  onUnassign={() => assignGuestToTable(guest.id, null)}
+                                  showUnassign={true}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      {/* Standalone guests */}
+                      {standaloneGuests.map((guest) => (
+                        <BoardGuestCard
+                          key={guest.id}
+                          guest={guest}
+                          onDragStart={handleDragStart}
+                          onUnassign={() => assignGuestToTable(guest.id, null)}
+                          showUnassign={true}
+                        />
+                      ))}
+                    </>
+                  );
+                })()
               )}
             </div>
           </div>
@@ -304,6 +409,14 @@ export const BoardView: React.FC = () => {
         <Plus className="w-5 h-5" />
         <span>+ 新增一張桌子</span>
       </button>
+
+      {/* Table Detail Modal when clicked from column header */}
+      {selectedTable && (
+        <TableDetailModal
+          table={selectedTable}
+          onClose={() => setSelectedTable(null)}
+        />
+      )}
     </div>
   );
 };
