@@ -146,10 +146,66 @@ export const WeddingCanvas: React.FC<WeddingCanvasProps> = ({ onDropGuestToTable
 
   const handleZoomIn = () => zoomAtCenter(0.15);
   const handleZoomOut = () => zoomAtCenter(-0.15);
-  const handleResetView = () => {
+
+  const handleResetView = useCallback(() => {
+    if (!canvasRef.current) {
+      setZoom(1);
+      setPan({ x: 40, y: 40 });
+      return;
+    }
+
+    const containerWidth = canvasRef.current.clientWidth || 1000;
+    const containerHeight = canvasRef.current.clientHeight || 800;
+
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minY = Infinity;
+    let maxY = -Infinity;
+
+    tables.forEach((t) => {
+      const isMainTable = t.table_no.includes('主') || t.name.includes('主');
+      const w = t.shape === 'circle' ? (isMainTable ? 130 : 115) : (isMainTable ? 150 : 130);
+      const h = t.shape === 'circle' ? (isMainTable ? 130 : 115) : (isMainTable ? 100 : 85);
+      if (t.x < minX) minX = t.x;
+      if (t.x + w > maxX) maxX = t.x + w;
+      if (t.y < minY) minY = t.y;
+      if (t.y + h > maxY) maxY = t.y + h;
+    });
+
+    landmarks.forEach((lm) => {
+      if (lm.x < minX) minX = lm.x;
+      if (lm.x + lm.width > maxX) maxX = lm.x + lm.width;
+      if (lm.y < minY) minY = lm.y;
+      if (lm.y + lm.height > maxY) maxY = lm.y + lm.height;
+    });
+
+    if (minX === Infinity || maxX === -Infinity) {
+      setZoom(1);
+      setPan({
+        x: Math.round(containerWidth / 2 - 500),
+        y: Math.round(containerHeight / 2 - 400),
+      });
+      return;
+    }
+
+    const contentCenterX = (minX + maxX) / 2;
+    const contentCenterY = (minY + maxY) / 2;
+
+    const nextPanX = Math.round(containerWidth / 2 - contentCenterX);
+    const nextPanY = Math.round(containerHeight / 2 - contentCenterY);
+
     setZoom(1);
-    setPan({ x: 40, y: 40 });
-  };
+    setPan({ x: nextPanX, y: nextPanY });
+  }, [tables, landmarks]);
+
+  // Initial center on mount
+  const hasInitializedRef = useRef(false);
+  useEffect(() => {
+    if (!hasInitializedRef.current && canvasRef.current) {
+      handleResetView();
+      hasInitializedRef.current = true;
+    }
+  }, [handleResetView]);
 
   // Add Table
   const handleAddTable = async () => {
@@ -293,7 +349,7 @@ export const WeddingCanvas: React.FC<WeddingCanvasProps> = ({ onDropGuestToTable
           <button
             onClick={handleResetView}
             className="p-2 text-slate-700 hover:text-rose-600 hover:bg-white rounded-lg transition-colors"
-            title="重置視角 (100%)"
+            title="重置視角並將桌位圖置中 (100%)"
           >
             <RotateCcw className="w-4 h-4" />
           </button>

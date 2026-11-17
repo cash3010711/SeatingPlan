@@ -15,6 +15,9 @@ import {
   Layers,
   Settings,
   Trash2,
+  Edit2,
+  Check,
+  X,
 } from 'lucide-react';
 
 export const BoardView: React.FC = () => {
@@ -434,6 +437,172 @@ const BoardGuestCard: React.FC<BoardGuestCardProps> = ({
   onUnassign,
   showUnassign,
 }) => {
+  const { updateGuest } = useWedding();
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(guest.name);
+  const [editSide, setEditSide] = useState<Guest['side']>(guest.side);
+  const [editMealType, setEditMealType] = useState<Guest['meal_type']>(guest.meal_type);
+  const [editNeedsBabyChair, setEditNeedsBabyChair] = useState(guest.needs_baby_chair);
+  const [editCakeCount, setEditCakeCount] = useState(guest.cake_count || 0);
+  const [editNotes, setEditNotes] = useState(guest.notes || '');
+
+  const handleStartEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditName(guest.name);
+    setEditSide(guest.side);
+    setEditMealType(guest.meal_type);
+    setEditNeedsBabyChair(guest.needs_baby_chair);
+    setEditCakeCount(guest.cake_count || 0);
+    setEditNotes(guest.notes || '');
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setIsEditing(false);
+  };
+
+  const handleSaveEdit = async (e: React.MouseEvent | React.FormEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!editName.trim()) {
+      alert('請輸入賓客姓名！');
+      return;
+    }
+    await updateGuest(guest.id, {
+      name: editName.trim(),
+      side: editSide,
+      meal_type: editMealType,
+      needs_baby_chair: editNeedsBabyChair,
+      cake_count: Math.max(0, editCakeCount),
+      notes: editNotes.trim() || undefined,
+    });
+    setIsEditing(false);
+  };
+
+  if (isEditing) {
+    return (
+      <div
+        className="bg-rose-50/90 p-2.5 rounded-xl border border-rose-300 shadow-sm space-y-2 select-text"
+        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-rose-200/80 pb-1.5">
+          <span className="text-[11px] font-bold text-rose-700 flex items-center gap-1">
+            <Edit2 className="w-3 h-3" />
+            編輯賓客資料
+          </span>
+          <button
+            type="button"
+            onClick={handleCancelEdit}
+            className="p-1 text-slate-400 hover:text-slate-600 rounded"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        <div className="space-y-1.5">
+          <div>
+            <label className="block text-[10px] font-semibold text-slate-600 mb-0.5">姓名</label>
+            <input
+              type="text"
+              autoFocus
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              className="w-full px-2 py-1 text-xs rounded border border-slate-300 focus:outline-none focus:ring-1 focus:ring-rose-500 bg-white"
+              placeholder="賓客姓名"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-1.5">
+            <div>
+              <label className="block text-[10px] font-semibold text-slate-600 mb-0.5">所屬方</label>
+              <select
+                value={editSide}
+                onChange={(e) => setEditSide(e.target.value as any)}
+                className="w-full px-1.5 py-1 text-xs rounded border border-slate-300 focus:outline-none focus:ring-1 focus:ring-rose-500 bg-white"
+              >
+                <option value="groom">男方</option>
+                <option value="bride">女方</option>
+                <option value="mutual">共同</option>
+                <option value="staff">工作</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-semibold text-slate-600 mb-0.5">餐點需求</label>
+              <select
+                value={editMealType}
+                onChange={(e) => setEditMealType(e.target.value as any)}
+                className="w-full px-1.5 py-1 text-xs rounded border border-slate-300 focus:outline-none focus:ring-1 focus:ring-rose-500 bg-white"
+              >
+                <option value="meat">葷食</option>
+                <option value="vegan">全素</option>
+                <option value="vegetarian">蛋奶素</option>
+                <option value="kid">兒童餐</option>
+                <option value="special">特殊餐</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-1.5 items-center pt-0.5">
+            <label className="flex items-center gap-1 text-[11px] font-semibold text-slate-700 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={editNeedsBabyChair}
+                onChange={(e) => setEditNeedsBabyChair(e.target.checked)}
+                className="rounded text-rose-600 focus:ring-rose-500 w-3.5 h-3.5"
+              />
+              <Baby className="w-3 h-3 text-blue-600" />
+              <span>兒童椅</span>
+            </label>
+            <div className="flex items-center gap-1">
+              <Gift className="w-3 h-3 text-pink-600 shrink-0" />
+              <input
+                type="number"
+                min={0}
+                max={10}
+                value={editCakeCount}
+                onChange={(e) => setEditCakeCount(Number(e.target.value))}
+                className="w-full px-1.5 py-0.5 text-xs rounded border border-slate-300 focus:outline-none focus:ring-1 focus:ring-rose-500 bg-white"
+                placeholder="餅數"
+                title="喜餅份數"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-semibold text-slate-600 mb-0.5">備註說明</label>
+            <input
+              type="text"
+              value={editNotes}
+              onChange={(e) => setEditNotes(e.target.value)}
+              placeholder="如飲食禁忌等"
+              className="w-full px-2 py-1 text-xs rounded border border-slate-300 focus:outline-none focus:ring-1 focus:ring-rose-500 bg-white"
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-1.5 pt-1.5 border-t border-rose-200">
+          <button
+            type="button"
+            onClick={handleCancelEdit}
+            className="px-2 py-1 text-[11px] text-slate-500 hover:text-slate-800 rounded"
+          >
+            取消
+          </button>
+          <button
+            type="button"
+            onClick={handleSaveEdit}
+            className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-semibold rounded shadow-2xs flex items-center gap-1"
+          >
+            <Check className="w-3 h-3" />
+            儲存
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       draggable
@@ -489,15 +658,25 @@ const BoardGuestCard: React.FC<BoardGuestCardProps> = ({
         </div>
       </div>
 
-      {showUnassign && (
+      <div className="flex items-center gap-0.5 shrink-0">
         <button
-          onClick={onUnassign}
-          className="p-1 text-slate-300 hover:text-amber-600 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-          title="移出此桌回到未排池"
+          onClick={handleStartEdit}
+          className="p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+          title="編輯賓客資訊"
         >
-          <UserMinus className="w-3.5 h-3.5" />
+          <Edit2 className="w-3.5 h-3.5" />
         </button>
-      )}
+
+        {showUnassign && (
+          <button
+            onClick={onUnassign}
+            className="p-1 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+            title="移出此桌回到未排池"
+          >
+            <UserMinus className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
     </div>
   );
 };

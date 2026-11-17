@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "node --max-old-space-size=4096 ./node_modules/typescript/bin/tsc && vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "node --max-old-space-size=4096 ./node_modules/vitest/vitest.mjs run"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.48.0",

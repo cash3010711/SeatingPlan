@@ -176,3 +176,56 @@ flowchart TD
 - [x] **10.4 看板模式桌位與家庭群組管理**
   - [x] 看板各桌標頭提供「編輯桌位」與「刪除此桌」快捷按鈕。
   - [x] 看板桌內整合家庭群組卡片，支援「整家退回未排池」與「解散家庭」。
+
+## Phase 6: 互動體驗優化與桌位名單編輯 (Interaction Optimization & Guest Editing)
+- [x] 6.1 頂部導覽列排版防擠壓優化 (`Navbar.tsx`)
+  - [x] 容器寬度擴展至滿版自適應 (`w-full`)
+  - [x] 各按鈕與標籤全數加入 `whitespace-nowrap` 與 `shrink-0`
+  - [x] 響應式斷點微調，確保中大螢幕無折行現象
+- [x] 6.2 彈窗滾輪冒泡事件隔離 (`TableDetailModal.tsx`)
+  - [x] Backdrop 遮罩與內容容器添加 `onWheel={(e) => e.stopPropagation()}`
+  - [x] 驗證 2D 畫布名單滾動時不觸發縮放
+  - [x] 驗證看板模式名單滾動時不觸發水平滾動
+- [x] 6.3 桌位詳情彈窗賓客行內編輯 (`TableDetailModal.tsx`)
+  - [x] 賓客清單列新增編輯按鈕 (`Edit2`)
+  - [x] 行內展開編輯表單（姓名、男女方、餐飲需求、兒童椅、喜餅、備註）
+  - [x] 串接 `updateGuest` 進行本地更新與後端同步
+- [x] 6.4 測試與驗證 (Testing & Quality Gates)
+  - [x] 撰寫 `TableDetailModal` 行內編輯與事件阻斷相關測試
+  - [x] 執行 `npm test` 確認既有與新測試 100% 通過
+  - [x] 執行 `npm run build` 確認無 TypeScript 型別報錯
+
+## Phase 7: 看板賓客卡片編輯與畫布幾何置中 (Board Guest Editing & Canvas Centering)
+- [x] 7.1 看板模式賓客卡片行內編輯 (`BoardView.tsx`)
+  - [x] 卡片新增編輯動作按鈕 (`Edit2`)
+  - [x] 展開行內編輯表單（姓名、男女方、餐食、兒童椅、喜餅、備註）
+  - [x] 串接 `updateGuest` 並在編輯時停用 `draggable`
+- [x] 7.2 2D 畫布重置視角幾何邊界置中 (`WeddingCanvas.tsx`)
+  - [x] 計算全會場所有桌位與地標之 Bounding Box
+  - [x] 根據畫布容器尺寸與幾何中心動態計算置中平移量 `pan`
+  - [x] 初次載入或點擊重置時，縮放 100% 並精準置中
+- [x] 7.3 測試與品質檢驗 (Testing & Verification)
+  - [x] 撰寫看板卡片編輯與畫布置中相關單元測試
+  - [x] 執行 `npm test` 確認全部通過 (34 項測試通過)
+  - [x] 執行 `npm run build` 確認生產環境建置成功
+
+## Phase 8: 畫布模式更名與模式切換防位移 (Canvas Renaming & Mode Switch Keep-Alive)
+- [x] 8.1 介面文案「2D 畫布模式」更名為「畫布模式」 (`Navbar.tsx`, `MainPage.tsx`)
+- [x] 8.2 模式切換時畫布狀態持久化 (`MainPage.tsx`)
+  - [x] 將條件渲染改為 Keep-Alive (`hidden` 樣式)，確保切換至看板再切回時畫布 `pan` 與 `zoom` 零位移、不重置
+- [x] 8.3 測試與品質檢驗 (Testing & Verification)
+  - [x] 撰寫與更新測試驗證畫布模式文案與互動
+  - [x] 執行 `npm test` 確認全部通過 (35 項測試通過)
+  - [x] 執行 `npm run build` 確認生產環境建置成功
+
+## Phase 9: 重置管理下拉式選單防遮擋修復 (Reset Dropdown Portal Fix)
+- [x] 9.1 下拉選單改採 React `createPortal` 渲染至 `document.body` (`Navbar.tsx`)
+  - [x] 脫離頂部導覽列 `h-16` 與 `overflow-x-auto` 之父層 CSS 剪裁（clipping）區域
+  - [x] 根據按鈕邊界 `getBoundingClientRect()` 動態精準錨定選單位置 (`position: fixed`, `z-[9999]`)
+  - [x] 支援點擊外部關閉、Esc 鍵關閉與視窗縮放/滾動同步重算
+- [x] 9.2 測試與品質檢驗 (Testing & Verification)
+  - [x] 撰寫重置管理下拉式選單之開合與 Portal 渲染單元測試 (`modalAndInteraction.test.tsx`)
+  - [x] 執行 `npm test` 確認全部通過 (36 項測試通過)
+  - [x] 執行 `npm run build` 確認生產環境建置成功
+
+

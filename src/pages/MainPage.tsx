@@ -39,7 +39,7 @@ class CanvasErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySta
     if (this.state.hasError) {
       return (
         <div className="flex-1 p-6 bg-red-50 text-red-800 overflow-auto border border-red-200 m-4 rounded-xl">
-          <h2 className="text-lg font-bold mb-2">2D 畫布渲染錯誤 (Canvas Render Error)</h2>
+          <h2 className="text-lg font-bold mb-2">畫布渲染錯誤 (Canvas Render Error)</h2>
           <p className="font-mono text-sm bg-white p-3 rounded border border-red-300 mb-3">
             {this.state.error?.toString()}
           </p>
@@ -90,15 +90,17 @@ export const MainPage: React.FC = () => {
       {/* KPI Stats Ribbon */}
       <StatsBanner />
 
-      {/* Main View Area */}
+      {/* Main View Area (keep-alive views so canvas pan/zoom & board scroll are preserved) */}
       <main className="flex-1 min-h-0 flex relative overflow-hidden">
-        {viewMode === 'canvas' ? (
+        <div className={`flex-1 min-h-0 flex relative overflow-hidden ${viewMode === 'canvas' ? '' : 'hidden'}`}>
           <CanvasErrorBoundary>
             <WeddingCanvas onDropGuestToTable={handleDropGuestToTable} />
           </CanvasErrorBoundary>
-        ) : (
+        </div>
+
+        <div className={`flex-1 min-h-0 flex relative overflow-hidden ${viewMode === 'board' ? '' : 'hidden'}`}>
           <BoardView />
-        )}
+        </div>
 
         {/* Unassigned Pool Drawer on the right (for canvas & board views) */}
         <UnassignedPoolDrawer
