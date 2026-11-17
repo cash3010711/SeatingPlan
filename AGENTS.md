@@ -41,6 +41,21 @@
   - 欄位映射：`mapColumn()` 需先去除星號標記（`*`, `＊`）、各式括號與空白，確保官方下載範本與外部自製 Excel 100% 雙向對齊。
   - 重複辨識：匯入前提供預覽對照窗，標註黃色警示，支援「當作同名同姓新增」、「略過」或「合併更新」。內部處理時維護動態 `guestMap`，防止多筆同名合併時 updates 覆蓋。
 
+### 2.5 畫布持久化與視圖 Keep-Alive (`MainPage.tsx`)
+- **原則**：使用者在「畫布模式」與「看板模式」之間切換時，畫布的縮放與平移座標不得重置或偏移。
+- **實作**：在 `MainPage.tsx` 採 CSS `hidden` 保持畫布組件持久掛載（Keep-Alive），避免組件反覆 Unmount / Mount 造成視角平移重設為預設座標。
+
+### 2.6 事件隔離與彈窗下拉選單 Portal 化 (`TableDetailModal.tsx`, `Navbar.tsx`)
+- **原則**：彈窗滾動與全域下拉選單不得受限於父容器剪裁（Clipping）或干擾背後畫布/看板。
+- **實作**：
+  - 彈窗名單滾輪事件：在 `TableDetailModal.tsx` 的 Backdrop 與名單容器加入 `onWheel={(e) => e.stopPropagation()}`，防止滾動名單時誤觸 2D 畫布縮放或看板橫向捲動。
+  - 下拉式選單：在 `Navbar.tsx` 中將「重置管理」選單改採 React `createPortal` 渲染至 `document.body`，根據按鈕座標（`getBoundingClientRect`）動態計算 `fixed` 座標與高層級 `z-index`，根除導覽列 `overflow-x-auto` 導致的 Y 軸裁切遮擋。
+
+### 2.7 畫布動態幾何置中算法 (`WeddingCanvas.tsx`)
+- **原則**：點擊「重置視角」時，視圖需回到 100% 縮放並將全會場所有桌位與地標精準水平/垂直幾何置中。
+- **實作**：動態計算所有桌位與地標之 Bounding Box 中心點，並對齊可視畫布容器幾何中心，避免固定座標偏移。
+
+
 ---
 
 ## 3. 測試與驗證標準 (Testing & Quality Gates)
